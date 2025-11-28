@@ -1,0 +1,299 @@
+{
+  "name": "Dailyfruits",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        224,
+        16
+      ],
+      "id": "0adf7451-2fae-4d51-9b2a-3e4d985c772f",
+      "name": "WhatsApp Trigger",
+      "webhookId": "e50256ed-89aa-492a-a79e-227aee0b89f0",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "DvAUDXSgpfjx9idY",
+          "name": "WhatsApp OAuth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        800,
+        208
+      ],
+      "id": "38ddee05-25a4-49dd-b833-84c27cc94785",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "ZTPiFQn2JA8W7uhq",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('WhatsApp Trigger').item.json.messages[0].text.body }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=# ROLE\nYou are a friendly AI assistant designed to chat with a user on WhatsApp.\n\n# BEHAVIOR RULES\n\n- When the user sends a new message, check if they share any **important personal/business information**.\n- If the information is important for future context, **save it using the Memory Tool**.\n- Never tell the user that you are saving memories.\n- Respond naturally, as a human-like helpful assistant.\n- If information is already saved, do not ask for it again.\n- Always continue the conversation smoothly.\n\n# MEMORY USAGE\n\n- Before replying, check the stored memories:\n   {{ $json.whatsapp_auto.toJsonString() }} \n- check fruits list details like price and avilable in google sheet with name fruits list\n- Use this information naturally to make the conversation feel personal and continuous.\n- Only save data that will matter later (preferences, ongoing projects, personal details relevant to future chat, long-term plans, etc.).\n\n# OUTPUT\n- Chat casually, clearly, and helpfully.\n- Maintain a friendly tone as if talking through WhatsApp, not formal like a corporate chatbot.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        832,
+        0
+      ],
+      "id": "9ac09b6e-ae15-45c9-aa1b-7170270d9dbf",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "924968227355840",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1184,
+        48
+      ],
+      "id": "395fa029-42dc-456a-8ba7-8d859625a104",
+      "name": "Send message",
+      "webhookId": "aee839ac-f6a6-499c-b3a9-b1cc2e319455",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "PjXzRwO5cEJwdwAM",
+          "name": "WhatsApp account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "whatsapp_auto",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "sender",
+              "condition": "eq",
+              "keyValue": "={{ $json.contacts[0].wa_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        416,
+        16
+      ],
+      "id": "62bbd661-2554-4cdf-a7f2-87679c9ec7d6",
+      "name": "Get many rows",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Am4sFjN5zebDmUaB",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "whatsapp_auto",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        624,
+        16
+      ],
+      "id": "c212c020-fd8b-4cff-98af-fa6a7309377e",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "tableId": "whatsapp_auto",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ $('WhatsApp Trigger').item.json.messages[0].text.body }}"
+            },
+            {
+              "fieldId": "sender",
+              "fieldValue": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}"
+            },
+            {
+              "fieldId": "recipient",
+              "fieldValue": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        960,
+        224
+      ],
+      "id": "9b1bfdd5-da7c-4388-8e66-49e5ee6c36dc",
+      "name": "Create a row in Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Am4sFjN5zebDmUaB",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1HGnLq5sGhOAhOr4FqVQ9KWY982z_hfqjMibED59lEwg",
+          "mode": "list",
+          "cachedResultName": "whatsapp_auto",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1HGnLq5sGhOAhOr4FqVQ9KWY982z_hfqjMibED59lEwg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1HGnLq5sGhOAhOr4FqVQ9KWY982z_hfqjMibED59lEwg/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1056,
+        304
+      ],
+      "id": "7a67ec59-3a68-4606-bcfd-d8885220c446",
+      "name": "fruits list",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "L0VrO9YnDraLOd2P",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row in Supabase": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fruits list": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "02894f94-1696-467f-9853-baf86bb973a5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8bb35f203919dd2fc9f27fc98d6ab2a279efa3f3a915cc44390bd635fdb51aca"
+  },
+  "id": "xaHkSjRfU7B5JXoE",
+  "tags": []
+}
